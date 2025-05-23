@@ -56,6 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
     updateMinimap();
   }
 
+
+  
   // --- Event Listeners ---
   function addEventListeners() {
     // Board Interaction
@@ -67,6 +69,25 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleResize);
+
+// ─── Сетка ────────────────────────────────
+    const showGridCheckbox = document.getElementById('show-grid');
+    showGridCheckbox.addEventListener('change', () => {
+        gridBackground.style.display = showGridCheckbox.checked ? 'block' : 'none';
+    });
+
+    const gridSizeInput = document.getElementById('grid-size');
+    const gridSizeValue = document.getElementById('grid-size-value');
+
+    function setGridSize(size) {
+        GRID_SIZE = size;
+        gridSizeValue.textContent = `${size}px`;
+        updateGridBackground();
+    }
+
+    gridSizeInput.addEventListener('input', e => setGridSize(+e.target.value));
+    setGridSize(+gridSizeInput.value);
+
 
     // Toolbar
     toolbar.addEventListener("click", handleToolbarClick);
@@ -317,23 +338,38 @@ document.addEventListener("DOMContentLoaded", () => {
     hideContextMenu();
   }
 
-  function updateToolbarState() {
-    document.querySelectorAll(".toolbar .tool-btn[id$="-tool-btn"]").forEach(btn => {
-      btn.classList.toggle("active", btn.id === `${activeTool}-tool-btn`);
-    });
-    document.querySelectorAll(".color-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.color === drawingColor && !btn.classList.contains("custom-color"));
-    });
-    document.getElementById("custom-color-input").closest(".custom-color").classList.toggle("active", document.getElementById("custom-color-input").value === drawingColor);
-
-     document.querySelectorAll(".stroke-btn").forEach(btn => {
-        btn.classList.toggle("active", parseInt(btn.dataset.width) === drawingLineWidth);
-    });
-    const drawOptions = toolbar.querySelector(".color-picker").parentElement;
-    if (drawOptions) {
-        drawOptions.style.display = (activeTool === "draw" || activeTool === "erase" || activeTool === "shape" || activeTool === "connect") ? "flex" : "none";
-    }
+function updateToolbarState() {
+  document.querySelectorAll(".toolbar .tool-btn[id$=\"-tool-btn\"]").forEach(btn => {
+    btn.classList.toggle("active", btn.id === `${activeTool}-tool-btn`);
+  });
+  document.querySelectorAll(".color-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.color === drawingColor && !btn.classList.contains("custom-color"));
+  });
+  // Ensure custom-color-input exists before trying to access its properties or closest
+  const customColorInput = document.getElementById("custom-color-input");
+  if (customColorInput && customColorInput.closest(".custom-color")) {
+    customColorInput.closest(".custom-color").classList.toggle("active", customColorInput.value === drawingColor);
   }
+
+
+   document.querySelectorAll(".stroke-btn").forEach(btn => {
+      btn.classList.toggle("active", parseInt(btn.dataset.width) === drawingLineWidth);
+  });
+
+  // --- CORRECTED SECTION ---
+  const colorPickerGroup = toolbar.querySelector(".toolbar-group.color-picker");
+  const strokePickerGroup = toolbar.querySelector(".toolbar-group.stroke-picker"); // Ensure your HTML has this class on the stroke picker's group
+  
+  const showDrawSpecificOptions = (activeTool === "draw" || activeTool === "erase" || activeTool === "shape" || activeTool === "connect");
+
+  if (colorPickerGroup) {
+      colorPickerGroup.style.display = showDrawSpecificOptions ? "flex" : "none";
+  }
+  if (strokePickerGroup) {
+      strokePickerGroup.style.display = showDrawSpecificOptions ? "flex" : "none";
+  }
+  // --- END OF CORRECTED SECTION ---
+}
 
   function updateCursor() {
     switch (activeTool) {
@@ -998,6 +1034,34 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeModal(modal) {
     modal.classList.remove("active");
   }
+
+  // ─── Theme ────────────────────────────────────────────────────────────
+const themeSelect = document.getElementById('theme-select');
+const themeBtn    = document.getElementById('theme-btn');
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+    } else if (theme === 'light') {
+        document.body.classList.remove('dark-theme');
+    } else {                       // auto
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.body.classList.toggle('dark-theme', prefersDark);
+    }
+    localStorage.setItem('mindCanvasTheme', theme);
+}
+
+themeSelect.addEventListener('change', e => applyTheme(e.target.value));
+themeBtn.addEventListener('click', () => {
+    // циклим auto → light → dark
+    const order = ['auto','light','dark'];
+    const next  = order[(order.indexOf(themeSelect.value)+1)%order.length];
+    themeSelect.value = next;
+    applyTheme(next);
+});
+
+// при старте
+applyTheme(localStorage.getItem('mindCanvasTheme') || 'auto');
 
   // --- Utility Functions ---
   function viewportToWorld(clientX, clientY, ignoreOffset = false) {
