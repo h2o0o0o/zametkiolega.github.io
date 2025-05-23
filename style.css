@@ -62,7 +62,7 @@ button, input, select, textarea {
     pointer-events: none;
     background-image: repeating-linear-gradient(to right, #aab3c7 0, #aab3c7 1px, transparent 1px, transparent 100%),
                       repeating-linear-gradient(to bottom, #aab3c7 0, #aab3c7 1px, transparent 1px, transparent 100%);
-    z-index: 1;
+    z-index: 0; /* Было 1, стало 0 */
 }
 
 /* Основной контейнер приложения */
@@ -700,36 +700,6 @@ button, input, select, textarea {
 
 .card:hover .card-resizer {
   opacity: 1;
-}
-
-/* Мини-карта */
-.minimap-container {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 200px;
-  height: 150px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  box-shadow: 0 2px 8px var(--shadow-color);
-  overflow: hidden;
-  z-index: 30;
-  display: none; /* Показывается только когда есть контент */
-}
-
-.minimap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background-color: var(--bg-color);
-}
-
-.minimap-viewport {
-  position: absolute;
-  border: 2px solid var(--primary-color);
-  background-color: rgba(94, 108, 255, 0.1);
-  cursor: move;
 }
 
 /* Контекстное меню */

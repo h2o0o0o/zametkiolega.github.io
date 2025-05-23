@@ -55,8 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadBoardFromStorage(); // Attempt to load saved state
     updateMinimap();
   }
-
-
   
   // --- Event Listeners ---
   function addEventListeners() {
