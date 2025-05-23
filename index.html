@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>MindCanvas - Бесконечная доска для заметок</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Верхняя панель -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <i class="ri-bubble-chart-fill"></i>
+        <span>MindCanvas</span>
+      </div>
+      <div class="board-title" contenteditable="true">Моя доска</div>
+    </div>
+    
+    <div class="header-center">
+      <div class="search-container">
+        <i class="ri-search-line"></i>
+        <input type="text" placeholder="Поиск по доске..." class="search-input">
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <button class="header-btn" id="share-btn" title="Поделиться">
+        <i class="ri-share-line"></i>
+      </button>
+      <button class="header-btn" id="settings-btn" title="Настройки">
+        <i class="ri-settings-3-line"></i>
+      </button>
+      <div class="user-profile">
+        <div class="avatar">ИП</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Боковая панель -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i class="ri-menu-fold-line"></i>
+      </button>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <i class="ri-dashboard-line"></i>
+          <span>Доски</span>
+        </div>
+        <ul class="sidebar-list">
+          <li class="sidebar-item active">
+            <i class="ri-artboard-2-line"></i>
+            <span>Моя доска</span>
+          </li>
+          <li class="sidebar-item">
+            <i class="ri-artboard-2-line"></i>
+            <span>Проект X</span>
+          </li>
+          <li class="sidebar-item add-item">
+            <i class="ri-add-line"></i>
+            <span>Новая доска</span>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <i class="ri-bookmark-line"></i>
+          <span>Закладки</span>
+        </div>
+        <ul class="sidebar-list">
+          <li class="sidebar-item">
+            <i class="ri-flag-line"></i>
+            <span>Важные идеи</span>
+          </li>
+          <li class="sidebar-item add-item">
+            <i class="ri-add-line"></i>
+            <span>Добавить закладку</span>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <i class="ri-folder-line"></i>
+          <span>Шаблоны</span>
+        </div>
+        <ul class="sidebar-list">
+          <li class="sidebar-item">
+            <i class="ri-file-list-3-line"></i>
+            <span>Канбан доска</span>
+          </li>
+          <li class="sidebar-item">
+            <i class="ri-mind-map"></i>
+            <span>Карта мыслей</span>
+          </li>
+          <li class="sidebar-item">
+            <i class="ri-calendar-line"></i>
+            <span>Планировщик</span>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <button class="sidebar-btn" title="Помощь">
+        <i class="ri-question-line"></i>
+      </button>
+      <button class="sidebar-btn" title="Тема">
+        <i class="ri-contrast-2-line"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Основная область с доской -->
+  <main class="main-content">
+    <!-- Панель инструментов -->
+    <div class="toolbar">
+      <div class="tool-group">
+        <button id="select-tool-btn" class="tool-btn active" title="Выбор/Перемещение (V)">
+          <i class="ri-cursor-line"></i>
+        </button>
+        <button id="hand-tool-btn" class="tool-btn" title="Рука (H)">
+          <i class="ri-hand-line"></i>
+        </button>
+        <button id="text-tool-btn" class="tool-btn" title="Текст (T)">
+          <i class="ri-text"></i>
+        </button>
+        <button id="draw-tool-btn" class="tool-btn" title="Рисование (B)">
+          <i class="ri-pencil-line"></i>
+        </button>
+        <button id="shape-tool-btn" class="tool-btn" title="Фигуры (S)">
+          <i class="ri-shape-line"></i>
+        </button>
+        <button id="connect-tool-btn" class="tool-btn" title="Связи (C)">
+          <i class="ri-link"></i>
+        </button>
+        <button id="erase-tool-btn" class="tool-btn" title="Ластик (E)">
+          <i class="ri-eraser-line"></i>
+        </button>
+      </div>
+      
+      <div class="tool-group">
+        <div class="color-picker">
+          <button class="color-btn active" style="--color: #5e6cff;" data-color="#5e6cff"></button>
+          <button class="color-btn" style="--color: #ff5e7a;" data-color="#ff5e7a"></button>
+          <button class="color-btn" style="--color: #47cf73;" data-color="#47cf73"></button>
+          <button class="color-btn" style="--color: #ffbe3d;" data-color="#ffbe3d"></button>
+          <button class="color-btn" style="--color: #ffffff;" data-color="#ffffff"></button>
+          <button class="color-btn custom-color" title="Выбрать цвет">
+            <i class="ri-add-line"></i>
+            <input type="color" id="custom-color-input" value="#5e6cff">
+          </button>
+        </div>
+        
+        <div class="stroke-width">
+          <button class="stroke-btn" data-width="1">
+            <span style="height: 1px;"></span>
+          </button>
+          <button class="stroke-btn active" data-width="2">
+            <span style="height: 2px;"></span>
+          </button>
+          <button class="stroke-btn" data-width="4">
+            <span style="height: 4px;"></span>
+          </button>
+          <button class="stroke-btn" data-width="6">
+            <span style="height: 6px;"></span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="tool-group">
+        <button id="add-card-btn" class="tool-btn" title="Добавить карточку (N)">
+          <i class="ri-add-box-line"></i>
+        </button>
+        <button id="add-image-btn" class="tool-btn" title="Добавить изображение (I)">
+          <i class="ri-image-add-line"></i>
+          <input id="img-upload" type="file" accept="image/*" style="display:none">
+        </button>
+        <button id="add-media-btn" class="tool-btn" title="Добавить медиа">
+          <i class="ri-film-line"></i>
+        </button>
+        <div class="dropdown">
+          <button class="tool-btn dropdown-toggle" title="Добавить элемент">
+            <i class="ri-add-line"></i>
+            <i class="ri-arrow-down-s-line"></i>
+          </button>
+          <div class="dropdown-menu">
+            <button class="dropdown-item">
+              <i class="ri-table-line"></i>
+              <span>Таблица</span>
+            </button>
+            <button class="dropdown-item">
+              <i class="ri-flow-chart"></i>
+              <span>Диаграмма</span>
+            </button>
+            <button class="dropdown-item">
+              <i class="ri-file-list-3-line"></i>
+              <span>Список задач</span>
+            </button>
+            <button class="dropdown-item">
+              <i class="ri-code-box-line"></i>
+              <span>Блок кода</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="tool-group">
+        <button id="undo-btn" class="tool-btn" title="Отменить (Ctrl+Z)">
+          <i class="ri-arrow-go-back-line"></i>
+        </button>
+        <button id="redo-btn" class="tool-btn" title="Повторить (Ctrl+Y)">
+          <i class="ri-arrow-go-forward-line"></i>
+        </button>
+      </div>
+      
+      <div class="tool-group view-controls">
+        <button id="zoom-out-btn" class="tool-btn" title="Уменьшить (-)">
+          <i class="ri-zoom-out-line"></i>
+        </button>
+        <div class="zoom-level">100%</div>
+        <button id="zoom-in-btn" class="tool-btn" title="Увеличить (+)">
+          <i class="ri-zoom-in-line"></i>
+        </button>
+        <button id="fit-screen-btn" class="tool-btn" title="По размеру экрана">
+          <i class="ri-fullscreen-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Область доски -->
+    <div id="boardViewport" class="board-viewport">
+      <div id="gridBackground" class="grid-background"></div>
+      <canvas id="drawingCanvas"></canvas>
+      <div id="boardWorld" class="board-world">
+        <!-- Карточки будут добавляться здесь динамически -->
+      </div>
+      
+      <!-- Мини-карта -->
+      <div class="minimap-container">
+        <div class="minimap">
+          <div class="minimap-viewport"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Контекстное меню -->
+  <div id="contextMenu" class="context-menu">
+    <div class="context-menu-group">
+      <button class="context-menu-item" data-action="add-text">
+        <i class="ri-text"></i>
+        <span>Добавить текст</span>
+      </button>
+      <button class="context-menu-item" data-action="add-image">
+        <i class="ri-image-add-line"></i>
+        <span>Добавить изображение</span>
+      </button>
+      <button class="context-menu-item" data-action="add-shape">
+        <i class="ri-shape-line"></i>
+        <span>Добавить фигуру</span>
+      </button>
+    </div>
+    <div class="context-menu-group">
+      <button class="context-menu-item" data-action="paste">
+        <i class="ri-clipboard-line"></i>
+        <span>Вставить</span>
+        <span class="shortcut">Ctrl+V</span>
+      </button>
+      <button class="context-menu-item" data-action="select-all">
+        <i class="ri-checkbox-multiple-line"></i>
+        <span>Выделить всё</span>
+        <span class="shortcut">Ctrl+A</span>
+      </button>
+    </div>
+    <div class="context-menu-group">
+      <button class="context-menu-item" data-action="create-group">
+        <i class="ri-group-line"></i>
+        <span>Создать группу</span>
+      </button>
+      <button class="context-menu-item" data-action="add-bookmark">
+        <i class="ri-bookmark-line"></i>
+        <span>Добавить закладку</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Модальные окна -->
+  <!-- Модальное окно настроек -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Настройки</h2>
+        <button class="modal-close"><i class="ri-close-line"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h3>Внешний вид</h3>
+          <div class="setting-item">
+            <label>Тема</label>
+            <div class="theme-selector">
+              <button class="theme-btn active" data-theme="dark">Темная</button>
+              <button class="theme-btn" data-theme="light">Светлая</button>
+              <button class="theme-btn" data-theme="system">Системная</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label>Размер сетки</label>
+            <input type="range" min="20" max="100" value="40" class="slider" id="gridSizeSlider">
+            <span class="setting-value">40px</span>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Редактор</h3>
+          <div class="setting-item">
+            <label>Автосохранение</label>
+            <label class="switch">
+              <input type="checkbox" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>Интервал автосохранения</label>
+            <select>
+              <option value="30">30 секунд</option>
+              <option value="60" selected>1 минута</option>
+              <option value="300">5 минут</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Горячие клавиши</h3>
+          <div class="hotkeys-list">
+            <div class="hotkey-item">
+              <span class="hotkey-action">Выбор</span>
+              <span class="hotkey-key">V</span>
+            </div>
+            <div class="hotkey-item">
+              <span class="hotkey-action">Рука</span>
+              <span class="hotkey-key">H</span>
+            </div>
+            <div class="hotkey-item">
+              <span class="hotkey-action">Текст</span>
+              <span class="hotkey-key">T</span>
+            </div>
+            <div class="hotkey-item">
+              <span class="hotkey-action">Рисование</span>
+              <span class="hotkey-key">B</span>
+            </div>
+            <div class="hotkey-item">
+              <span class="hotkey-action">Ластик</span>
+              <span class="hotkey-key">E</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Отмена</button>
+        <button class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно общего доступа -->
+  <div class="modal" id="shareModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Поделиться доской</h2>
+        <button class="modal-close"><i class="ri-close-line"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="share-link-container">
+          <label>Ссылка для доступа</label>
+          <div class="share-link">
+            <input type="text" value="https://mindcanvas.app/board/abc123" readonly>
+            <button class="btn btn-icon" title="Копировать ссылку">
+              <i class="ri-file-copy-line"></i>
+            </button>
+          </div>
+        </div>
+        <div class="share-permissions">
+          <label>Права доступа</label>
+          <div class="permission-options">
+            <label class="radio-container">
+              <input type="radio" name="permission" value="view" checked>
+              <span class="radio-label">Просмотр</span>
+              <span class="radio-description">Пользователи могут только просматривать доску</span>
+            </label>
+            <label class="radio-container">
+              <input type="radio" name="permission" value="comment">
+              <span class="radio-label">Комментирование</span>
+              <span class="radio-description">Пользователи могут просматривать и комментировать</span>
+            </label>
+            <label class="radio-container">
+              <input type="radio" name="permission" value="edit">
+              <span class="radio-label">Редактирование</span>
+              <span class="radio-description">Пользователи могут редактировать доску</span>
+            </label>
+          </div>
+        </div>
+        <div class="share-collaborators">
+          <label>Пригласить пользователей</label>
+          <div class="collaborator-input">
+            <input type="email" placeholder="Введите email...">
+            <button class="btn btn-primary">Пригласить</button>
+          </div>
+          <div class="collaborators-list">
+            <div class="collaborator-item">
+              <div class="avatar">АП</div>
+              <div class="collaborator-info">
+                <div class="collaborator-name">Анна Петрова</div>
+                <div class="collaborator-email">anna@example.com</div>
+              </div>
+              <select class="collaborator-role">
+                <option value="view">Просмотр</option>
+                <option value="comment">Комментирование</option>
+                <option value="edit" selected>Редактирование</option>
+              </select>
+              <button class="btn btn-icon" title="Удалить">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Закрыть</button>
+        <button class="btn btn-primary">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
