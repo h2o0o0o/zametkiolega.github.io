@@ -1,34 +1,34 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   // --- DOM Elements ---
-  const boardViewport = document.getElementById('boardViewport');
-  const boardWorld = document.getElementById('boardWorld');
-  const gridBackground = document.getElementById('gridBackground');
-  const drawingCanvas = document.getElementById('drawingCanvas');
-  const ctx = drawingCanvas.getContext('2d');
-  const contextMenuEl = document.getElementById('contextMenu');
-  const toolbar = document.querySelector('.toolbar');
-  const sidebar = document.getElementById('sidebar');
-  const sidebarToggle = document.getElementById('sidebar-toggle');
-  const minimapContainer = document.querySelector('.minimap-container');
-  const minimapEl = document.querySelector('.minimap');
-  const minimapViewportEl = document.querySelector('.minimap-viewport');
-  const zoomLevelEl = document.querySelector('.zoom-level');
-  const settingsModal = document.getElementById('settingsModal');
-  const shareModal = document.getElementById('shareModal');
-  const settingsBtn = document.getElementById('settings-btn');
-  const shareBtn = document.getElementById('share-btn');
-  const modalCloseBtns = document.querySelectorAll('.modal-close');
-  const imgUploadInput = document.getElementById('img-upload');
+  const boardViewport = document.getElementById("boardViewport");
+  const boardWorld = document.getElementById("boardWorld");
+  const gridBackground = document.getElementById("gridBackground");
+  const drawingCanvas = document.getElementById("drawingCanvas");
+  const ctx = drawingCanvas.getContext("2d");
+  const contextMenuEl = document.getElementById("contextMenu");
+  const toolbar = document.querySelector(".toolbar");
+  const sidebar = document.getElementById("sidebar");
+  const sidebarToggle = document.getElementById("sidebar-toggle");
+  const minimapContainer = document.querySelector(".minimap-container");
+  const minimapEl = document.querySelector(".minimap");
+  const minimapViewportEl = document.querySelector(".minimap-viewport");
+  const zoomLevelEl = document.querySelector(".zoom-level");
+  const settingsModal = document.getElementById("settingsModal");
+  const shareModal = document.getElementById("shareModal");
+  const settingsBtn = document.getElementById("settings-btn");
+  const shareBtn = document.getElementById("share-btn");
+  const modalCloseBtns = document.querySelectorAll(".modal-close");
+  const imgUploadInput = document.getElementById("img-upload");
 
   // --- State Variables ---
   let worldOffsetX = 0, worldOffsetY = 0, worldScale = 1;
   const MIN_SCALE = 0.1, MAX_SCALE = 4.0;
   let GRID_SIZE = 40;
   let isPanning = false, panStartX, panStartY, initialOffsetX, initialOffsetY;
-  let activeTool = 'select'; // 'select', 'hand', 'draw', 'erase', 'text', 'shape', 'connect'
+  let activeTool = "select"; // "select", "hand", "draw", "erase", "text", "shape", "connect"
   let isCurrentlyDrawing = false;
   let drawingPaths = [], currentDrawingPath = {};
-  let drawingColor = '#5e6cff';
+  let drawingColor = "#5e6cff";
   let drawingLineWidth = 2;
   let contextMenuVisible = false;
   let contextMenuX = 0, contextMenuY = 0;
@@ -36,73 +36,80 @@ document.addEventListener('DOMContentLoaded', () => {
   let isResizingCard = false;
   let isDraggingCard = false;
   let isDraggingMinimap = false;
-  let selectedElements = new Set(); // For future multi-select
+  let selectedElements = new Set(); // For multi-select
   let history = []; // For undo/redo
   let historyIndex = -1;
+  const MAX_HISTORY = 50;
+  let draggedCard = null;
+  let resizeCardEl = null;
+  let dragOffsetX, dragOffsetY, initialCardX, initialCardY;
+  let resizeStartX, resizeStartY, initialCardWidth, initialCardHeight;
 
   // --- Initialization ---
   function init() {
     setupDrawingCanvas();
     applyWorldTransform();
-    activateTool('select');
+    activateTool("select");
     updateToolbarState();
     addEventListeners();
-    // Load initial state if available (e.g., from localStorage)
-    // loadBoardFromStorage();
+    loadBoardFromStorage(); // Attempt to load saved state
     updateMinimap();
   }
 
   // --- Event Listeners ---
   function addEventListeners() {
     // Board Interaction
-    boardViewport.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    boardViewport.addEventListener('wheel', handleWheel, { passive: false });
-    boardViewport.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleResize);
+    boardViewport.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    boardViewport.addEventListener("wheel", handleWheel, { passive: false });
+    boardViewport.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("click", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
 
     // Toolbar
-    toolbar.addEventListener('click', handleToolbarClick);
-    document.getElementById('custom-color-input').addEventListener('change', (e) => {
+    toolbar.addEventListener("click", handleToolbarClick);
+    document.getElementById("custom-color-input").addEventListener("input", (e) => {
       updateBrushColor(e.target.value);
       // Make the custom color button active visually
-      document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
-      e.target.closest('.custom-color').classList.add('active');
+      document.querySelectorAll(".color-btn").forEach(btn => btn.classList.remove("active"));
+      e.target.closest(".custom-color").classList.add("active");
     });
-    imgUploadInput.addEventListener('change', (e) => addImageCardWrapper(e.target.files));
+    imgUploadInput.addEventListener("change", (e) => addImageCardWrapper(e.target.files));
 
     // Sidebar
-    sidebarToggle.addEventListener('click', toggleSidebar);
+    sidebarToggle.addEventListener("click", toggleSidebar);
 
     // Minimap
-    minimapViewportEl.addEventListener('mousedown', handleMinimapMouseDown);
+    minimapViewportEl.addEventListener("mousedown", handleMinimapMouseDown);
 
     // Modals
-    settingsBtn.addEventListener('click', () => openModal(settingsModal));
-    shareBtn.addEventListener('click', () => openModal(shareModal));
+    settingsBtn.addEventListener("click", () => openModal(settingsModal));
+    shareBtn.addEventListener("click", () => openModal(shareModal));
     modalCloseBtns.forEach(btn => {
-      btn.addEventListener('click', () => closeModal(btn.closest('.modal')));
+      btn.addEventListener("click", () => closeModal(btn.closest(".modal")));
     });
-    document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal')) {
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("modal")) {
         closeModal(e.target);
       }
     });
-    
+
     // Context Menu Actions
-    contextMenuEl.addEventListener('click', handleContextMenuAction);
+    contextMenuEl.addEventListener("click", handleContextMenuAction);
   }
 
   // --- Core Logic: Panning & Zooming ---
   function applyWorldTransform() {
-    boardWorld.style.transform = `translate(${worldOffsetX}px, ${worldOffsetY}px) scale(${worldScale})`;
-    updateGridBackground();
-    redrawDrawingCanvas();
-    updateMinimap();
-    updateZoomLevel();
+    // Use requestAnimationFrame for smoother rendering
+    requestAnimationFrame(() => {
+        boardWorld.style.transform = `translate(${worldOffsetX}px, ${worldOffsetY}px) scale(${worldScale})`;
+        updateGridBackground();
+        redrawDrawingCanvas();
+        updateMinimap();
+        updateZoomLevel();
+    });
   }
 
   function updateGridBackground() {
@@ -111,31 +118,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const bgPosY = worldOffsetY % bgSize;
     gridBackground.style.backgroundSize = `${bgSize}px ${bgSize}px`;
     gridBackground.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
-    // Adjust grid line visibility based on scale (optional)
     const fineGridOpacity = Math.min(1, Math.max(0, (worldScale - 0.2) * 2));
-    gridBackground.style.opacity = fineGridOpacity * 0.3; // Base opacity 0.3
+    gridBackground.style.opacity = fineGridOpacity * 0.3;
   }
 
   function handleMouseDown(e) {
     const target = e.target;
-    const isCardTarget = target.closest('.card');
-    const isResizer = target.classList.contains('card-resizer');
-    const isToolbarTarget = target.closest('.toolbar');
-    const isSidebarTarget = target.closest('.sidebar');
-    const isContextMenuTarget = target.closest('.context-menu');
-    const isMinimapTarget = target.closest('.minimap-container');
+    const isCardTarget = target.closest(".card");
+    const isResizer = target.classList.contains("card-resizer");
+    const isToolbarTarget = target.closest(".toolbar");
+    const isSidebarTarget = target.closest(".sidebar");
+    const isContextMenuTarget = target.closest(".context-menu");
+    const isMinimapTarget = target.closest(".minimap-container");
+    const isEditable = target.isContentEditable || target.tagName === "TEXTAREA" || target.tagName === "INPUT";
 
-    if (isToolbarTarget || isSidebarTarget || isContextMenuTarget || isMinimapTarget || isResizer) return;
+    if (isToolbarTarget || isSidebarTarget || isContextMenuTarget || isMinimapTarget || isResizer || isEditable) return;
     if (e.button === 2) return; // Right-click handled by contextmenu
 
     hideContextMenu();
 
-    if (activeTool === 'draw' || activeTool === 'erase') {
+    if (activeTool === "draw" || activeTool === "erase") {
       if (!isCardTarget && e.button === 0) {
         startDrawing(e);
         e.preventDefault();
       }
-    } else if (activeTool === 'select') {
+    } else if (activeTool === "select") {
       if (isCardTarget && !isResizer && e.button === 0) {
         startDraggingCard(e, isCardTarget);
         e.preventDefault();
@@ -143,13 +150,24 @@ document.addEventListener('DOMContentLoaded', () => {
         startPanning(e);
         e.preventDefault();
       }
-    } else if (activeTool === 'hand') {
+    } else if (activeTool === "hand") {
         startPanning(e);
         e.preventDefault();
-    } else if (activeTool === 'text' && !isCardTarget && e.button === 0) {
+    } else if (activeTool === "text" && !isCardTarget && e.button === 0) {
         const worldPos = viewportToWorld(e.clientX, e.clientY);
-        addCard('Новый текст...', worldPos.x, worldPos.y);
-        activateTool('select'); // Switch back to select after adding text
+        const newCard = addCard("", worldPos.x, worldPos.y);
+        // Find the textarea within the new card and focus it
+        const textarea = newCard.querySelector("textarea");
+        if (textarea) {
+            setTimeout(() => { // Timeout needed to ensure element is fully in DOM and focusable
+                textarea.style.display = "block";
+                newCard.querySelector(".markdown-preview").style.display = "none";
+                textarea.focus();
+                textarea.style.height = "auto";
+                textarea.style.height = textarea.scrollHeight + "px";
+            }, 0);
+        }
+        activateTool("select"); // Switch back to select after adding text
     }
     // Add handlers for shape, connect tools later
 
@@ -161,19 +179,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleMouseMove(e) {
-    if (isPanning) {
-      worldOffsetX = initialOffsetX + (e.clientX - panStartX);
-      worldOffsetY = initialOffsetY + (e.clientY - panStartY);
-      applyWorldTransform();
-    } else if (isCurrentlyDrawing && (activeTool === 'draw' || activeTool === 'erase')) {
-      continueDrawing(e);
-    } else if (isDraggingCard) {
-      dragCard(e);
-    } else if (isResizingCard) {
-      resizeCard(e);
-    } else if (isDraggingMinimap) {
-      dragMinimap(e);
-    }
+    // Use requestAnimationFrame to throttle expensive updates
+    requestAnimationFrame(() => {
+        if (isPanning) {
+          worldOffsetX = initialOffsetX + (e.clientX - panStartX);
+          worldOffsetY = initialOffsetY + (e.clientY - panStartY);
+          applyWorldTransform();
+        } else if (isCurrentlyDrawing && (activeTool === "draw" || activeTool === "erase")) {
+          continueDrawing(e);
+        } else if (isDraggingCard) {
+          dragCard(e);
+        } else if (isResizingCard) {
+          resizeCard(e);
+        } else if (isDraggingMinimap) {
+          dragMinimap(e);
+        }
+    });
   }
 
   function handleMouseUp(e) {
@@ -197,12 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleWheel(e) {
-    // Prevent zoom while scrolling inside a card's scrollable area
-    const cardContent = e.target.closest('.card .markdown-preview, .card textarea');
+    const cardContent = e.target.closest(".card .markdown-preview, .card textarea");
     if (cardContent && cardContent.scrollHeight > cardContent.clientHeight) {
-      return; 
+      return;
     }
-    
+
     e.preventDefault();
     hideContextMenu();
 
@@ -213,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const worldMouseX_before = (mouseX - worldOffsetX) / worldScale;
     const worldMouseY_before = (mouseY - worldOffsetY) / worldScale;
 
-    const scaleAmount = 1 - e.deltaY * 0.0015;
+    const scaleAmount = 1 - e.deltaY * 0.001;
     let newScale = worldScale * scaleAmount;
     newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
 
@@ -230,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panStartY = e.clientY;
     initialOffsetX = worldOffsetX;
     initialOffsetY = worldOffsetY;
-    boardViewport.style.cursor = 'grabbing';
+    boardViewport.style.cursor = "grabbing";
   }
 
   function stopPanning() {
@@ -258,10 +278,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fitToScreen() {
-    // Basic implementation: Reset zoom and center (needs refinement)
-    worldScale = 1;
-    worldOffsetX = 50;
-    worldOffsetY = 50;
+    if (boardWorld.children.length === 0) {
+        worldScale = 1;
+        worldOffsetX = 50;
+        worldOffsetY = 50;
+        applyWorldTransform();
+        return;
+    }
+
+    const bounds = getBoardWorldBounds(0); // Get bounds without padding
+    const viewportRect = boardViewport.getBoundingClientRect();
+    const padding = 50; // Viewport padding
+
+    const scaleX = (viewportRect.width - 2 * padding) / bounds.width;
+    const scaleY = (viewportRect.height - 2 * padding) / bounds.height;
+    worldScale = Math.min(scaleX, scaleY, MAX_SCALE); // Limit max zoom
+    worldScale = Math.max(worldScale, MIN_SCALE); // Limit min zoom
+
+    // Center the content
+    const scaledBoundsWidth = bounds.width * worldScale;
+    const scaledBoundsHeight = bounds.height * worldScale;
+
+    worldOffsetX = (viewportRect.width - scaledBoundsWidth) / 2 - bounds.minX * worldScale;
+    worldOffsetY = (viewportRect.height - scaledBoundsHeight) / 2 - bounds.minY * worldScale;
+
     applyWorldTransform();
   }
 
@@ -270,72 +310,71 @@ document.addEventListener('DOMContentLoaded', () => {
     activeTool = toolName;
     updateToolbarState();
     updateCursor();
-    drawingCanvas.style.pointerEvents = (toolName === 'draw' || toolName === 'erase') ? 'auto' : 'none';
-    if (isCurrentlyDrawing) { // Cancel drawing if tool changes
-      stopDrawing(true); // Pass true to discard the path
+    drawingCanvas.style.pointerEvents = (toolName === "draw" || toolName === "erase") ? "auto" : "none";
+    if (isCurrentlyDrawing) {
+      stopDrawing(true);
     }
     hideContextMenu();
   }
 
   function updateToolbarState() {
-    // Update tool buttons
-    document.querySelectorAll('.toolbar .tool-btn[id$="-tool-btn"]').forEach(btn => {
-      btn.classList.toggle('active', btn.id === `${activeTool}-tool-btn`);
+    document.querySelectorAll(".toolbar .tool-btn[id$="-tool-btn"]").forEach(btn => {
+      btn.classList.toggle("active", btn.id === `${activeTool}-tool-btn`);
     });
-    // Update color/stroke buttons (example)
-    document.querySelectorAll('.color-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.color === drawingColor);
+    document.querySelectorAll(".color-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.color === drawingColor && !btn.classList.contains("custom-color"));
     });
-     document.querySelectorAll('.stroke-btn').forEach(btn => {
-        btn.classList.toggle('active', parseInt(btn.dataset.width) === drawingLineWidth);
+    document.getElementById("custom-color-input").closest(".custom-color").classList.toggle("active", document.getElementById("custom-color-input").value === drawingColor);
+
+     document.querySelectorAll(".stroke-btn").forEach(btn => {
+        btn.classList.toggle("active", parseInt(btn.dataset.width) === drawingLineWidth);
     });
-    // Show/hide relevant options based on tool (e.g., color/stroke for draw)
-    const drawOptions = toolbar.querySelector('.color-picker').parentElement;
+    const drawOptions = toolbar.querySelector(".color-picker").parentElement;
     if (drawOptions) {
-        drawOptions.style.display = (activeTool === 'draw' || activeTool === 'erase' || activeTool === 'shape' || activeTool === 'connect') ? 'flex' : 'none';
+        drawOptions.style.display = (activeTool === "draw" || activeTool === "erase" || activeTool === "shape" || activeTool === "connect") ? "flex" : "none";
     }
   }
 
   function updateCursor() {
     switch (activeTool) {
-      case 'select': boardViewport.style.cursor = 'grab'; break;
-      case 'hand': boardViewport.style.cursor = 'grab'; break;
-      case 'draw': boardViewport.style.cursor = 'crosshair'; break;
-      case 'erase': boardViewport.style.cursor = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path fill='white' stroke='black' stroke-width='1' d='M6 21.917q-.833 0-1.417-.584Q4 20.75 4 19.917V6.083q0-.833.583-1.416Q5.167 4.084 6 4.084h12q.833 0 1.417.583.583.584.583 1.417v13.834q0 .833-.583 1.416-.584.584-1.417.584Zm0-1.5h12V6.083H6Zm6-3.5 4.25-4.25-1.063-1.062L12 15.292l-4.25-4.25-1.062 1.063Z'/></svg>") 12 12, auto`; break; // Example eraser cursor
-      case 'text': boardViewport.style.cursor = 'text'; break;
-      case 'shape': boardViewport.style.cursor = 'crosshair'; break;
-      case 'connect': boardViewport.style.cursor = 'crosshair'; break;
-      default: boardViewport.style.cursor = 'default';
+      case "select": boardViewport.style.cursor = "default"; break; // Default arrow for select
+      case "hand": boardViewport.style.cursor = "grab"; break;
+      case "draw": boardViewport.style.cursor = "crosshair"; break;
+      case "erase": boardViewport.style.cursor = `url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'><path fill=\'white\' stroke=\'black\' stroke-width=\'1\' d=\'M6 21.917q-.833 0-1.417-.584Q4 20.75 4 19.917V6.083q0-.833.583-1.416Q5.167 4.084 6 4.084h12q.833 0 1.417.583.583.584.583 1.417v13.834q0 .833-.583 1.416-.584.584-1.417.584Zm0-1.5h12V6.083H6Zm6-3.5 4.25-4.25-1.063-1.062L12 15.292l-4.25-4.25-1.062 1.063Z\'/></svg>") 12 12, auto`; break;
+      case "text": boardViewport.style.cursor = "text"; break;
+      case "shape": boardViewport.style.cursor = "crosshair"; break;
+      case "connect": boardViewport.style.cursor = "crosshair"; break;
+      default: boardViewport.style.cursor = "default";
     }
   }
 
   function handleToolbarClick(e) {
-    const button = e.target.closest('.tool-btn');
-    const colorBtn = e.target.closest('.color-btn:not(.custom-color)');
-    const strokeBtn = e.target.closest('.stroke-btn');
-    const dropdownItem = e.target.closest('.dropdown-item');
+    const button = e.target.closest(".tool-btn");
+    const colorBtn = e.target.closest(".color-btn:not(.custom-color)");
+    const strokeBtn = e.target.closest(".stroke-btn");
+    const dropdownItem = e.target.closest(".dropdown-item");
 
     if (button) {
       const toolId = button.id;
-      if (toolId.endsWith('-tool-btn')) {
-        const toolName = toolId.replace('-tool-btn', '');
-        if (['select', 'hand', 'draw', 'erase', 'text', 'shape', 'connect'].includes(toolName)) {
+      if (toolId.endsWith("-tool-btn")) {
+        const toolName = toolId.replace("-tool-btn", "");
+        if (["select", "hand", "draw", "erase", "text", "shape", "connect"].includes(toolName)) {
           activateTool(toolName);
         }
-      } else if (toolId === 'add-card-btn') {
+      } else if (toolId === "add-card-btn") {
         const center = getViewportCenterWorld();
-        addCard('Новая карточка...', center.x - 125, center.y - 75);
-      } else if (toolId === 'add-image-btn') {
+        addCard("Новая карточка...", center.x - 125, center.y - 75);
+      } else if (toolId === "add-image-btn") {
         imgUploadInput.click();
-      } else if (toolId === 'undo-btn') {
-        // undo();
-      } else if (toolId === 'redo-btn') {
-        // redo();
-      } else if (toolId === 'zoom-out-btn') {
+      } else if (toolId === "undo-btn") {
+        undo();
+      } else if (toolId === "redo-btn") {
+        redo();
+      } else if (toolId === "zoom-out-btn") {
         zoom(1 / 1.2);
-      } else if (toolId === 'zoom-in-btn') {
+      } else if (toolId === "zoom-in-btn") {
         zoom(1.2);
-      } else if (toolId === 'fit-screen-btn') {
+      } else if (toolId === "fit-screen-btn") {
         fitToScreen();
       }
     }
@@ -343,18 +382,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (colorBtn) {
         updateBrushColor(colorBtn.dataset.color);
     }
-    
+
     if (strokeBtn) {
         updateBrushSize(parseInt(strokeBtn.dataset.width));
     }
-    
+
     if (dropdownItem) {
         // Handle dropdown actions (add table, diagram, etc.)
-        console.log('Dropdown item clicked:', dropdownItem.textContent.trim());
+        console.log("Dropdown item clicked:", dropdownItem.textContent.trim());
         // Close dropdown (optional)
-        const dropdown = dropdownItem.closest('.dropdown');
-        if (dropdown) dropdown.querySelector('.dropdown-menu').style.display = 'none';
-        setTimeout(() => { if(dropdown) dropdown.querySelector('.dropdown-menu').style.display = ''; }, 100); // Allow hover state to reset
+        const dropdown = dropdownItem.closest(".dropdown");
+        if (dropdown) dropdown.querySelector(".dropdown-menu").style.display = "none";
+        setTimeout(() => { if(dropdown) dropdown.querySelector(".dropdown-menu").style.display = ""; }, 100); // Allow hover state to reset
     }
   }
 
@@ -366,8 +405,10 @@ document.addEventListener('DOMContentLoaded', () => {
     drawingCanvas.height = rect.height * dpr;
     drawingCanvas.style.width = `${rect.width}px`;
     drawingCanvas.style.height = `${rect.height}px`;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform before scaling
     ctx.scale(dpr, dpr);
     ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
   }
 
   function redrawDrawingCanvas() {
@@ -379,10 +420,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.translate(worldOffsetX, worldOffsetY);
     ctx.scale(worldScale, worldScale);
 
-    // Draw committed paths
     drawingPaths.forEach(path => drawPathObject(path));
 
-    // Draw current path (if drawing/erasing)
     if (isCurrentlyDrawing && currentDrawingPath.points && currentDrawingPath.points.length > 0) {
       drawPathObject(currentDrawingPath);
     }
@@ -394,10 +433,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!pathObj.points || pathObj.points.length < 1) return;
     ctx.beginPath();
     ctx.strokeStyle = pathObj.color;
-    // Adjust line width based on scale, but ensure minimum visibility
-    ctx.lineWidth = Math.max(0.5 / worldScale, pathObj.lineWidth / worldScale);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(0.5, pathObj.lineWidth) / worldScale; // Ensure minimum visible width
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
     ctx.moveTo(pathObj.points[0].x, pathObj.points[0].y);
     for (let i = 1; i < pathObj.points.length; i++) {
@@ -410,18 +448,18 @@ document.addEventListener('DOMContentLoaded', () => {
     isCurrentlyDrawing = true;
     const worldPos = viewportToWorld(e.clientX, e.clientY);
 
-    if (activeTool === 'draw') {
+    if (activeTool === "draw") {
       currentDrawingPath = {
         id: `draw-${Date.now()}`,
         color: drawingColor,
         lineWidth: drawingLineWidth,
         points: [{ x: worldPos.x, y: worldPos.y }]
       };
-    } else if (activeTool === 'erase') {
-      currentDrawingPath = { // Temporary path for eraser visualization (optional)
+    } else if (activeTool === "erase") {
+      currentDrawingPath = { // Temporary path for eraser visualization
         id: `erase-${Date.now()}`,
-        color: 'rgba(255, 0, 0, 0.3)', // Visual feedback for eraser
-        lineWidth: drawingLineWidth,
+        color: "rgba(255, 255, 255, 0.5)", // Visual feedback for eraser
+        lineWidth: drawingLineWidth * 1.5, // Make eraser visually larger
         points: [{ x: worldPos.x, y: worldPos.y }]
       };
       performErasure(worldPos.x, worldPos.y, drawingLineWidth / worldScale);
@@ -433,25 +471,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const worldPos = viewportToWorld(e.clientX, e.clientY);
     currentDrawingPath.points.push({ x: worldPos.x, y: worldPos.y });
 
-    if (activeTool === 'erase') {
+    if (activeTool === "erase") {
       performErasure(worldPos.x, worldPos.y, drawingLineWidth / worldScale);
     }
 
-    redrawDrawingCanvas(); // Redraw includes the current path
+    redrawDrawingCanvas();
   }
 
   function stopDrawing(discard = false) {
     if (!isCurrentlyDrawing) return;
     isCurrentlyDrawing = false;
 
-    if (!discard && activeTool === 'draw' && currentDrawingPath.points && currentDrawingPath.points.length > 1) {
+    if (!discard && activeTool === "draw" && currentDrawingPath.points && currentDrawingPath.points.length > 1) {
+      // Simplify path slightly? (Optional performance improvement)
       drawingPaths.push(currentDrawingPath);
-      // Add to history for undo/redo
-      // recordHistory({ type: 'add-path', path: currentDrawingPath });
+      recordHistory({ type: "add-path", path: { ...currentDrawingPath } }); // Store copy
     }
-    
+
     currentDrawingPath = {};
-    redrawDrawingCanvas(); // Final redraw without the temporary path
+    redrawDrawingCanvas();
   }
 
   function updateBrushColor(value) {
@@ -466,83 +504,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function performErasure(worldX, worldY, eraseRadiusWorld) {
     let changed = false;
+    const removedPaths = [];
     const eraseRadiusSq = eraseRadiusWorld * eraseRadiusWorld;
 
     for (let i = drawingPaths.length - 1; i >= 0; i--) {
       const path = drawingPaths[i];
       let pathHit = false;
-      // Check distance from point to line segments for better accuracy
+      // Simple point-based check for now
       for (let j = 0; j < path.points.length; j++) {
           const pt = path.points[j];
           const dx = pt.x - worldX;
           const dy = pt.y - worldY;
-          if ((dx * dx + dy * dy) < eraseRadiusSq) {
+          if ((dx * dx + dy * dy) < eraseRadiusSq * 4) { // Increase hit radius slightly
               pathHit = true;
               break;
           }
-          // Add segment check here if needed
       }
 
       if (pathHit) {
-        // recordHistory({ type: 'remove-path', path: drawingPaths[i], index: i });
+        removedPaths.push({ path: { ...drawingPaths[i] }, index: i }); // Store copy
         drawingPaths.splice(i, 1);
         changed = true;
       }
     }
     if (changed) {
+      recordHistory({ type: "remove-paths", paths: removedPaths.reverse() }); // Store removed paths for undo
       redrawDrawingCanvas();
     }
   }
 
   // --- Card Management ---
   function createCardElement(id, x, y, width = 250, height) {
-    const card = document.createElement('div');
-    card.className = 'card';
+    const card = document.createElement("div");
+    card.className = "card";
     card.dataset.id = id;
     card.style.left = `${x}px`;
     card.style.top = `${y}px`;
     card.style.width = `${width}px`;
     if (height) card.style.height = `${height}px`;
+    card.style.zIndex = 10; // Default z-index
 
-    // Card Header (optional, for color tag and actions)
-    const cardHeader = document.createElement('div');
-    cardHeader.className = 'card-header';
-    const cardColorTag = document.createElement('div');
-    cardColorTag.className = 'card-color'; // Style this with card data
-    const cardActions = document.createElement('div');
-    cardActions.className = 'card-actions';
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'card-btn close-btn';
-    closeBtn.title = 'Удалить';
-    closeBtn.innerHTML = '<i class="ri-close-line"></i>';
+    const cardHeader = document.createElement("div");
+    cardHeader.className = "card-header";
+    const cardColorTag = document.createElement("div");
+    cardColorTag.className = "card-color";
+    const cardActions = document.createElement("div");
+    cardActions.className = "card-actions";
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "card-btn close-btn";
+    closeBtn.title = "Удалить";
+    closeBtn.innerHTML = 	'<i class="ri-close-line"></i>';
     closeBtn.onclick = (e) => {
       e.stopPropagation();
+      const cardData = getCardData(card);
       boardWorld.removeChild(card);
-      // recordHistory({ type: 'remove-card', cardData: getCardData(card) });
+      recordHistory({ type: "remove-card", cardData: cardData });
+      updateMinimap();
     };
     cardActions.appendChild(closeBtn);
     cardHeader.appendChild(cardColorTag);
     cardHeader.appendChild(cardActions);
     card.appendChild(cardHeader);
 
-    // Card Content Area
-    const cardContent = document.createElement('div');
-    cardContent.className = 'card-content';
+    const cardContent = document.createElement("div");
+    cardContent.className = "card-content";
     card.appendChild(cardContent);
 
-    // Resizer
-    const resizer = document.createElement('div');
-    resizer.className = 'card-resizer';
+    const resizer = document.createElement("div");
+    resizer.className = "card-resizer";
     card.appendChild(resizer);
-    resizer.addEventListener('mousedown', (e) => {
+    resizer.addEventListener("mousedown", (e) => {
         e.stopPropagation();
         startResizingCard(e, card);
     });
 
-    // Dragging (handled in board mousedown)
-    card.addEventListener('mousedown', (e) => {
-        if (activeTool === 'select' && e.button === 0 && !e.target.closest('.card-resizer, .card-actions, textarea, .markdown-preview')) {
-            // Bring card to front
+    card.addEventListener("mousedown", (e) => {
+        if (activeTool === "select" && e.button === 0 && !e.target.closest(".card-resizer, .card-actions, textarea, .markdown-preview, input, button, select")) {
             bringToFront(card);
         }
     });
@@ -550,76 +587,85 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   }
 
-  function addCard(content = '', x = 100, y = 100, id = `card-${cardIdCounter++}`, width, height, type = 'text') {
+  function addCard(content = "", x = 100, y = 100, id = `card-${cardIdCounter++}`, width, height, type = "text", zIndex = 10) {
     const card = createCardElement(id, x, y, width, height);
-    const cardContentEl = card.querySelector('.card-content');
+    const cardContentEl = card.querySelector(".card-content");
+    card.style.zIndex = zIndex;
 
-    if (type === 'text') {
-      const textarea = document.createElement('textarea');
-      const previewDiv = document.createElement('div');
-      previewDiv.className = 'markdown-preview';
-      textarea.placeholder = 'Введите текст...';
+    if (type === "text") {
+      const textarea = document.createElement("textarea");
+      const previewDiv = document.createElement("div");
+      previewDiv.className = "markdown-preview";
+      textarea.placeholder = "Введите текст...";
+      textarea.value = content;
+      card.dataset.markdownContent = content;
+
+      function renderMarkdown() {
+          try {
+              previewDiv.innerHTML = marked.parse(card.dataset.markdownContent || "*Пусто*");
+          } catch (err) {
+              previewDiv.innerHTML = "Ошибка рендеринга Markdown";
+              console.error("Markdown parsing error:", err);
+          }
+      }
 
       function switchToPreview() {
         card.dataset.markdownContent = textarea.value;
-        previewDiv.style.display = 'block';
-        textarea.style.display = 'none';
-        try {
-            previewDiv.innerHTML = marked.parse(card.dataset.markdownContent || '*Пусто*');
-        } catch (err) {
-            previewDiv.innerHTML = 'Ошибка рендеринга Markdown';
-            console.error("Markdown parsing error:", err);
-        }
-        // addCheckboxHandlers(previewDiv, card); // Add if needed
+        renderMarkdown();
+        previewDiv.style.display = "block";
+        textarea.style.display = "none";
       }
 
       function switchToEdit() {
-        previewDiv.style.display = 'none';
-        textarea.style.display = 'block';
-        textarea.value = card.dataset.markdownContent || '';
+        previewDiv.style.display = "none";
+        textarea.style.display = "block";
+        textarea.value = card.dataset.markdownContent || "";
         textarea.focus();
-        // Auto-resize textarea
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
       }
 
-      textarea.addEventListener('input', () => {
-          textarea.style.height = 'auto';
-          textarea.style.height = textarea.scrollHeight + 'px';
+      textarea.addEventListener("input", () => {
+          textarea.style.height = "auto";
+          textarea.style.height = textarea.scrollHeight + "px";
+          card.dataset.markdownContent = textarea.value; // Update data on input
       });
-      textarea.value = content;
-      card.dataset.markdownContent = content;
       previewDiv.ondblclick = switchToEdit;
       textarea.onblur = switchToPreview;
-      textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+      textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
           textarea.blur();
         }
+        // Prevent board keydowns while editing
+        e.stopPropagation();
       });
 
       cardContentEl.appendChild(previewDiv);
       cardContentEl.appendChild(textarea);
-      switchToPreview(); // Start in preview mode
+      switchToPreview();
 
-    } else if (type === 'img') {
-      const img = document.createElement('img');
-      img.src = content; // content is the data URL or path
-      img.style.maxWidth = '100%';
-      img.style.display = 'block';
+    } else if (type === "img") {
+      const img = document.createElement("img");
+      img.src = content;
+      img.style.maxWidth = "100%";
+      img.style.display = "block";
+      img.style.borderRadius = "var(--border-radius)"; // Add some rounding
       img.onload = () => {
-        if (!height) { // Auto-adjust height based on image aspect ratio if not provided
+        if (!height) {
           const aspectRatio = img.naturalHeight / img.naturalWidth;
-          const currentWidth = card.offsetWidth - 32; // Account for padding
-          card.style.height = `${currentWidth * aspectRatio + 60}px`; // Add padding/header height
+          const currentWidth = card.offsetWidth - 32;
+          card.style.height = `${currentWidth * aspectRatio + 60}px`;
         }
+        updateMinimap(); // Update minimap after image loads
       };
-      img.onerror = () => { img.alt = 'Не удалось загрузить изображение'; };
+      img.onerror = () => { img.alt = "Не удалось загрузить изображение"; };
       cardContentEl.appendChild(img);
     }
 
     boardWorld.appendChild(card);
     bringToFront(card);
-    // recordHistory({ type: 'add-card', cardData: getCardData(card) });
+    recordHistory({ type: "add-card", cardData: getCardData(card) });
+    updateMinimap();
     return card;
   }
 
@@ -629,94 +675,105 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const center = getViewportCenterWorld();
-      addCard(e.target.result, center.x - 150, center.y - 100, undefined, 300, undefined, 'img');
+      // Use stored position from context menu if available
+      const posX = imgUploadInput.dataset.posX ? parseFloat(imgUploadInput.dataset.posX) : center.x - 150;
+      const posY = imgUploadInput.dataset.posY ? parseFloat(imgUploadInput.dataset.posY) : center.y - 100;
+      addCard(e.target.result, posX, posY, undefined, 300, undefined, "img");
+      // Clear stored position
+      delete imgUploadInput.dataset.posX;
+      delete imgUploadInput.dataset.posY;
     };
     reader.readAsDataURL(file);
-    imgUploadInput.value = ''; // Reset input
+    imgUploadInput.value = "";
   }
 
-  let dragOffsetX, dragOffsetY, draggedCard, initialCardX, initialCardY;
   function startDraggingCard(e, card) {
     isDraggingCard = true;
     draggedCard = card;
-    draggedCard.classList.add('dragging');
+    draggedCard.classList.add("dragging");
     bringToFront(draggedCard);
     const cardRect = card.getBoundingClientRect();
-    // Calculate offset from mouse click to card's top-left corner in viewport space
-    dragOffsetX = e.clientX - cardRect.left;
-    dragOffsetY = e.clientY - cardRect.top;
+    const viewportRect = boardViewport.getBoundingClientRect();
+    // Calculate offset relative to viewport, adjusted for scale
+    dragOffsetX = (e.clientX - cardRect.left) / worldScale;
+    dragOffsetY = (e.clientY - cardRect.top) / worldScale;
     // Store initial world position
     initialCardX = parseFloat(card.style.left);
     initialCardY = parseFloat(card.style.top);
+    boardViewport.style.cursor = "grabbing"; // Change cursor while dragging
   }
 
   function dragCard(e) {
     if (!isDraggingCard || !draggedCard) return;
-    // Calculate new viewport position based on mouse and initial offset
-    const newViewportX = e.clientX - dragOffsetX;
-    const newViewportY = e.clientY - dragOffsetY;
-    // Convert viewport position to world position
-    const worldPos = viewportToWorld(newViewportX, newViewportY, true); // Pass true to ignore offset
-    draggedCard.style.left = `${worldPos.x}px`;
-    draggedCard.style.top = `${worldPos.y}px`;
+    // Calculate new world position based on mouse movement and initial offset
+    const worldPos = viewportToWorld(e.clientX, e.clientY);
+    draggedCard.style.left = `${worldPos.x - dragOffsetX}px`;
+    draggedCard.style.top = `${worldPos.y - dragOffsetY}px`;
   }
 
   function stopDraggingCard() {
     if (!isDraggingCard || !draggedCard) return;
-    draggedCard.classList.remove('dragging');
-    // Record final position for history?
-    // const finalCardX = parseFloat(draggedCard.style.left);
-    // const finalCardY = parseFloat(draggedCard.style.top);
-    // if (finalCardX !== initialCardX || finalCardY !== initialCardY) {
-    //     recordHistory({ type: 'move-card', cardId: draggedCard.dataset.id, from: {x: initialCardX, y: initialCardY}, to: {x: finalCardX, y: finalCardY} });
-    // }
+    draggedCard.classList.remove("dragging");
+    const finalCardX = parseFloat(draggedCard.style.left);
+    const finalCardY = parseFloat(draggedCard.style.top);
+    if (finalCardX !== initialCardX || finalCardY !== initialCardY) {
+        recordHistory({ type: "move-card", cardId: draggedCard.dataset.id, from: {x: initialCardX, y: initialCardY}, to: {x: finalCardX, y: finalCardY} });
+    }
     isDraggingCard = false;
     draggedCard = null;
+    updateCursor(); // Reset cursor
+    updateMinimap();
   }
 
-  let resizeCardEl, initialCardWidth, initialCardHeight, resizeStartX, resizeStartY;
   function startResizingCard(e, card) {
     isResizingCard = true;
     resizeCardEl = card;
-    resizeCardEl.classList.add('resizing');
+    resizeCardEl.classList.add("resizing");
     initialCardWidth = card.offsetWidth;
     initialCardHeight = card.offsetHeight;
+    initialCardX = parseFloat(card.style.left);
+    initialCardY = parseFloat(card.style.top);
     resizeStartX = e.clientX;
     resizeStartY = e.clientY;
-    document.addEventListener('mousemove', resizeCard);
-    document.addEventListener('mouseup', stopResizingCard);
+    document.addEventListener("mousemove", resizeCard);
+    document.addEventListener("mouseup", stopResizingCard);
   }
 
   function resizeCard(e) {
     if (!isResizingCard || !resizeCardEl) return;
     const dx = (e.clientX - resizeStartX) / worldScale;
     const dy = (e.clientY - resizeStartY) / worldScale;
-    resizeCardEl.style.width = `${Math.max(150, initialCardWidth + dx)}px`;
-    resizeCardEl.style.height = `${Math.max(100, initialCardHeight + dy)}px`;
-    // Trigger resize on internal elements if necessary (e.g., textarea)
-    const textarea = resizeCardEl.querySelector('textarea');
-    if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+    const newWidth = Math.max(150, initialCardWidth + dx);
+    const newHeight = Math.max(100, initialCardHeight + dy);
+    resizeCardEl.style.width = `${newWidth}px`;
+    resizeCardEl.style.height = `${newHeight}px`;
+    const textarea = resizeCardEl.querySelector("textarea");
+    if (textarea && textarea.style.display !== "none") {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
     }
   }
 
   function stopResizingCard() {
     if (!isResizingCard || !resizeCardEl) return;
-    resizeCardEl.classList.remove('resizing');
-    document.removeEventListener('mousemove', resizeCard);
-    document.removeEventListener('mouseup', stopResizingCard);
-    // Record history?
+    resizeCardEl.classList.remove("resizing");
+    document.removeEventListener("mousemove", resizeCard);
+    document.removeEventListener("mouseup", stopResizingCard);
+    const finalWidth = resizeCardEl.offsetWidth;
+    const finalHeight = resizeCardEl.offsetHeight;
+    if (finalWidth !== initialCardWidth || finalHeight !== initialCardHeight) {
+        recordHistory({ type: "resize-card", cardId: resizeCardEl.dataset.id, from: {w: initialCardWidth, h: initialCardHeight}, to: {w: finalWidth, h: finalHeight} });
+    }
     isResizingCard = false;
     resizeCardEl = null;
+    updateMinimap();
   }
 
   function bringToFront(element) {
-    // Simple z-index increment
     const maxZ = Array.from(boardWorld.children).reduce((max, child) => {
         const z = parseInt(child.style.zIndex) || 0;
         return Math.max(max, z);
-    }, 10); // Start above canvas/grid
+    }, 9); // Start z-index from 10
     element.style.zIndex = maxZ + 1;
   }
 
@@ -724,25 +781,24 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleContextMenu(e) {
     e.preventDefault();
     const target = e.target;
-    const isCardContent = target.closest('.card textarea, .card .markdown-preview');
-    
-    // Allow native context menu for text editing inside cards
+    const isCardContent = target.closest(".card textarea, .card .markdown-preview");
+
     if (isCardContent) {
         hideContextMenu();
-        return; 
+        return;
     }
 
     contextMenuX = e.clientX;
     contextMenuY = e.clientY;
     contextMenuEl.style.left = `${contextMenuX}px`;
     contextMenuEl.style.top = `${contextMenuY}px`;
-    contextMenuEl.style.display = 'block';
+    contextMenuEl.style.display = "block";
     contextMenuVisible = true;
   }
 
   function hideContextMenu() {
     if (contextMenuVisible) {
-      contextMenuEl.style.display = 'none';
+      contextMenuEl.style.display = "none";
       contextMenuVisible = false;
     }
   }
@@ -751,125 +807,135 @@ document.addEventListener('DOMContentLoaded', () => {
     if (contextMenuVisible && !contextMenuEl.contains(e.target)) {
       hideContextMenu();
     }
-    // Deselect elements if clicking on empty space
-    if (activeTool === 'select' && !e.target.closest('.card, .toolbar, .sidebar, .context-menu, .minimap-container')) {
+    if (activeTool === "select" && !e.target.closest(".card, .toolbar, .sidebar, .context-menu, .minimap-container")) {
         selectedElements.clear();
-        // Remove selection visuals from cards
-        document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll(".card.selected").forEach(c => c.classList.remove("selected"));
     }
   }
-  
+
   function handleContextMenuAction(e) {
-      const item = e.target.closest('.context-menu-item');
+      const item = e.target.closest(".context-menu-item");
       if (!item) return;
-      
+
       const action = item.dataset.action;
       const worldPos = viewportToWorld(contextMenuX, contextMenuY);
-      
+
       switch(action) {
-          case 'add-text':
-              addCard('Новый текст...', worldPos.x, worldPos.y);
+          case "add-text":
+              addCard("", worldPos.x, worldPos.y);
               break;
-          case 'add-image':
-              imgUploadInput.dataset.posX = worldPos.x; // Store position for later use
+          case "add-image":
+              imgUploadInput.dataset.posX = worldPos.x;
               imgUploadInput.dataset.posY = worldPos.y;
               imgUploadInput.click();
               break;
-          case 'paste':
+          case "paste":
               pasteAtLocation(worldPos.x, worldPos.y);
               break;
-          // Add other actions: add-shape, select-all, create-group, add-bookmark
+          // Add other actions later
           default:
-              console.log('Context menu action:', action);
+              console.log("Context menu action:", action);
       }
-      
+
       hideContextMenu();
   }
-  
+
   async function pasteAtLocation(worldX, worldY) {
       try {
           const clipboardItems = await navigator.clipboard.read();
           for (const item of clipboardItems) {
-              if (item.types.includes('text/plain')) {
-                  const blob = await item.getType('text/plain');
+              if (item.types.includes("text/plain")) {
+                  const blob = await item.getType("text/plain");
                   const text = await blob.text();
                   addCard(text, worldX, worldY);
-                  break; // Paste first text item
-              } else if (item.types.find(type => type.startsWith('image/'))) {
-                  const imageType = item.types.find(type => type.startsWith('image/'));
+                  break;
+              } else if (item.types.find(type => type.startsWith("image/"))) {
+                  const imageType = item.types.find(type => type.startsWith("image/"));
                   const blob = await item.getType(imageType);
                   const reader = new FileReader();
                   reader.onload = (e) => {
-                      addCard(e.target.result, worldX, worldY, undefined, 300, undefined, 'img');
+                      addCard(e.target.result, worldX, worldY, undefined, 300, undefined, "img");
                   };
                   reader.readAsDataURL(blob);
-                  break; // Paste first image item
+                  break;
               }
           }
       } catch (err) {
-          console.error('Failed to read clipboard contents: ', err);
-          alert('Не удалось вставить из буфера обмена. Возможно, требуется разрешение.');
+          console.error("Failed to read clipboard contents: ", err);
+          alert("Не удалось вставить из буфера обмена. Возможно, требуется разрешение.");
       }
   }
 
   // --- Minimap ---
   function updateMinimap() {
-    if (!boardWorld.children.length) {
-        minimapContainer.style.display = 'none';
-        return; // Hide minimap if board is empty
-    }
-    minimapContainer.style.display = 'block';
+    requestAnimationFrame(() => {
+        if (!boardWorld.children.length && drawingPaths.length === 0) {
+            minimapContainer.style.display = "none";
+            return;
+        }
+        minimapContainer.style.display = "block";
 
-    const worldBounds = getBoardWorldBounds();
-    const viewportRect = boardViewport.getBoundingClientRect();
+        const worldBounds = getBoardWorldBounds();
+        const viewportRect = boardViewport.getBoundingClientRect();
 
-    // Calculate scale factor for minimap
-    const scaleX = minimapEl.clientWidth / worldBounds.width;
-    const scaleY = minimapEl.clientHeight / worldBounds.height;
-    const minimapScale = Math.min(scaleX, scaleY) * 0.9; // Add some padding
+        if (worldBounds.width <= 0 || worldBounds.height <= 0) return; // Avoid division by zero
 
-    // Calculate viewport representation on minimap
-    const minimapViewportWidth = viewportRect.width / worldScale * minimapScale;
-    const minimapViewportHeight = viewportRect.height / worldScale * minimapScale;
-    const minimapViewportX = (-worldOffsetX / worldScale - worldBounds.minX) * minimapScale;
-    const minimapViewportY = (-worldOffsetY / worldScale - worldBounds.minY) * minimapScale;
+        const scaleX = minimapEl.clientWidth / worldBounds.width;
+        const scaleY = minimapEl.clientHeight / worldBounds.height;
+        const minimapScale = Math.min(scaleX, scaleY) * 0.95; // Use more space
 
-    minimapViewportEl.style.width = `${minimapViewportWidth}px`;
-    minimapViewportEl.style.height = `${minimapViewportHeight}px`;
-    minimapViewportEl.style.left = `${minimapViewportX}px`;
-    minimapViewportEl.style.top = `${minimapViewportY}px`;
+        const minimapViewportWidth = Math.min(minimapEl.clientWidth, viewportRect.width / worldScale * minimapScale);
+        const minimapViewportHeight = Math.min(minimapEl.clientHeight, viewportRect.height / worldScale * minimapScale);
+        const minimapViewportX = Math.max(0, (-worldOffsetX / worldScale - worldBounds.minX) * minimapScale);
+        const minimapViewportY = Math.max(0, (-worldOffsetY / worldScale - worldBounds.minY) * minimapScale);
 
-    // Store scales for drag calculation
-    minimapViewportEl.dataset.minimapScale = minimapScale;
-    minimapViewportEl.dataset.worldMinX = worldBounds.minX;
-    minimapViewportEl.dataset.worldMinY = worldBounds.minY;
+        minimapViewportEl.style.width = `${minimapViewportWidth}px`;
+        minimapViewportEl.style.height = `${minimapViewportHeight}px`;
+        minimapViewportEl.style.left = `${minimapViewportX}px`;
+        minimapViewportEl.style.top = `${minimapViewportY}px`;
+
+        minimapViewportEl.dataset.minimapScale = minimapScale;
+        minimapViewportEl.dataset.worldMinX = worldBounds.minX;
+        minimapViewportEl.dataset.worldMinY = worldBounds.minY;
+    });
   }
 
-  function getBoardWorldBounds() {
+  function getBoardWorldBounds(padding = 200) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    if (boardWorld.children.length === 0) {
-        // Default bounds if empty
+    let hasContent = false;
+
+    Array.from(boardWorld.children).forEach(el => {
+      if (el.classList.contains("card")) {
+          const x = parseFloat(el.style.left);
+          const y = parseFloat(el.style.top);
+          const w = el.offsetWidth;
+          const h = el.offsetHeight;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x + w);
+          maxY = Math.max(maxY, y + h);
+          hasContent = true;
+      }
+    });
+
+    drawingPaths.forEach(path => {
+        path.points.forEach(pt => {
+            minX = Math.min(minX, pt.x);
+            minY = Math.min(minY, pt.y);
+            maxX = Math.max(maxX, pt.x);
+            maxY = Math.max(maxY, pt.y);
+            hasContent = true;
+        });
+    });
+
+    if (!hasContent) {
         const center = getViewportCenterWorld();
         return { minX: center.x - 500, minY: center.y - 500, maxX: center.x + 500, maxY: center.y + 500, width: 1000, height: 1000 };
     }
-    
-    Array.from(boardWorld.children).forEach(el => {
-      const x = parseFloat(el.style.left);
-      const y = parseFloat(el.style.top);
-      const w = el.offsetWidth;
-      const h = el.offsetHeight;
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
-    });
-    // Add drawing bounds later if needed
-    
-    // Add padding
-    const padding = 200;
+
     minX -= padding; minY -= padding; maxX += padding; maxY += padding;
 
-    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+    return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }; // Ensure width/height > 0
   }
 
   let minimapDragStartX, minimapDragStartY;
@@ -878,8 +944,8 @@ document.addEventListener('DOMContentLoaded', () => {
       isDraggingMinimap = true;
       minimapDragStartX = e.clientX;
       minimapDragStartY = e.clientY;
-      document.addEventListener('mousemove', dragMinimap);
-      document.addEventListener('mouseup', stopDraggingMinimap);
+      document.addEventListener("mousemove", dragMinimap);
+      document.addEventListener("mouseup", stopDraggingMinimap);
       e.stopPropagation();
   }
 
@@ -887,60 +953,50 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isDraggingMinimap) return;
       const dx = e.clientX - minimapDragStartX;
       const dy = e.clientY - minimapDragStartY;
-      
+
       const minimapScale = parseFloat(minimapViewportEl.dataset.minimapScale);
       const worldMinX = parseFloat(minimapViewportEl.dataset.worldMinX);
       const worldMinY = parseFloat(minimapViewportEl.dataset.worldMinY);
-      
-      // Convert minimap pixel movement to world coordinate movement
+
+      if (!minimapScale) return; // Avoid NaN if scale is 0
+
+      // Calculate how much the world offset should change based on minimap drag
       const worldDx = -dx / minimapScale;
       const worldDy = -dy / minimapScale;
-      
-      // Update world offset based on the drag
-      // Need to calculate the new offset based on the change in the minimap viewport's top-left corner
-      const currentMinimapX = parseFloat(minimapViewportEl.style.left);
-      const currentMinimapY = parseFloat(minimapViewportEl.style.top);
-      
-      const newMinimapX = currentMinimapX + dx;
-      const newMinimapY = currentMinimapY + dy;
-      
-      // Convert new minimap position back to world offset
-      worldOffsetX = -( (newMinimapX / minimapScale) + worldMinX ) * worldScale;
-      worldOffsetY = -( (newMinimapY / minimapScale) + worldMinY ) * worldScale;
-      
+
+      // Update world offset directly
+      worldOffsetX += worldDx * worldScale;
+      worldOffsetY += worldDy * worldScale;
+
       applyWorldTransform();
-      
-      // Update start position for next move event
+
       minimapDragStartX = e.clientX;
       minimapDragStartY = e.clientY;
   }
 
   function stopDraggingMinimap() {
       isDraggingMinimap = false;
-      document.removeEventListener('mousemove', dragMinimap);
-      document.removeEventListener('mouseup', stopDraggingMinimap);
+      document.removeEventListener("mousemove", dragMinimap);
+      document.removeEventListener("mouseup", stopDraggingMinimap);
   }
 
   // --- Sidebar ---
   function toggleSidebar() {
-    sidebar.classList.toggle('collapsed');
-    // Adjust main content margin
-    document.querySelector('.main-content').style.marginLeft = sidebar.classList.contains('collapsed')
-      ? `${sidebar.offsetWidth}px` // Use actual width after transition
-      : `${sidebar.offsetWidth}px`;
-    // Recalculate canvas size after transition
+    sidebar.classList.toggle("collapsed");
+    const transitionDuration = parseFloat(getComputedStyle(sidebar).transitionDuration) * 1000;
+    // Use timeout to ensure transition completes before resizing
     setTimeout(() => {
         handleResize();
-    }, 300); // Match CSS transition duration
+    }, transitionDuration);
   }
 
   // --- Modals ---
   function openModal(modal) {
-    modal.classList.add('active');
+    modal.classList.add("active");
   }
 
   function closeModal(modal) {
-    modal.classList.remove('active');
+    modal.classList.remove("active");
   }
 
   // --- Utility Functions ---
@@ -964,133 +1020,276 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleKeyDown(e) {
     hideContextMenu();
-    // Ignore if typing in inputs/textareas
-    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) return;
+    if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.isContentEditable) return;
 
+    let handled = true; // Assume handled unless default case
     switch (e.key.toLowerCase()) {
-      case 'v': activateTool('select'); break;
-      case 'h': activateTool('hand'); break;
-      case 'b': activateTool('draw'); break;
-      case 'e': activateTool('erase'); break;
-      case 't': activateTool('text'); break;
-      case 's': activateTool('shape'); break; // Placeholder
-      case 'c': activateTool('connect'); break; // Placeholder
-      case 'n': 
+      case "v": activateTool("select"); break;
+      case "h": activateTool("hand"); break;
+      case "b": activateTool("draw"); break;
+      case "e": activateTool("erase"); break;
+      case "t": activateTool("text"); break;
+      case "s": activateTool("shape"); break;
+      case "c": activateTool("connect"); break;
+      case "n":
           const center = getViewportCenterWorld();
-          addCard('Новая карточка...', center.x - 125, center.y - 75);
+          addCard("Новая карточка...", center.x - 125, center.y - 75);
           break;
-      case 'i': imgUploadInput.click(); break;
-      case '+':
-      case '=': zoom(1.2); break;
-      case '-': zoom(1 / 1.2); break;
-      case 'z':
+      case "i": imgUploadInput.click(); break;
+      case "+":
+      case "=": zoom(1.2); break;
+      case "-": zoom(1 / 1.2); break;
+      case "z":
         if (e.ctrlKey || e.metaKey) {
-          // undo();
-          e.preventDefault();
+          undo();
+        } else {
+            handled = false;
         }
         break;
-      case 'y':
+      case "y":
         if (e.ctrlKey || e.metaKey) {
-          // redo();
-          e.preventDefault();
+          redo();
+        } else {
+            handled = false;
         }
         break;
-      case 's':
+      case "s":
           if (e.ctrlKey || e.metaKey) {
-              // saveBoard();
-              e.preventDefault();
+              saveBoardToStorage();
+              // Add visual feedback for save
+              const saveBtn = document.querySelector(".header-btn[title=\"Сохранить\"]"); // Assuming a save button exists
+              if(saveBtn) {
+                  saveBtn.innerHTML = 	'<i class="ri-check-line"></i>';
+                  setTimeout(() => { saveBtn.innerHTML = 	'<i class="ri-save-line"></i>'; }, 1500);
+              }
+          } else {
+              handled = false;
           }
           break;
-      case 'o':
-          if (e.ctrlKey || e.metaKey) {
-              // loadBoard();
-              e.preventDefault();
-          }
-          break;
-      case 'delete':
-      case 'backspace':
-          // Delete selected elements
+      // case "o": // Load might need confirmation
+      //     if (e.ctrlKey || e.metaKey) {
+      //         loadBoardFromStorage();
+      //     } else {
+      //         handled = false;
+      //     }
+      //     break;
+      case "delete":
+      case "backspace":
+          // Delete selected elements (implement selection first)
           // deleteSelected();
           break;
+      default:
+          handled = false; // Not one of our shortcuts
+    }
+    if (handled) {
+        e.preventDefault();
     }
   }
 
   function handleResize() {
     setupDrawingCanvas();
-    applyWorldTransform(); // Redraws canvas and updates minimap
+    applyWorldTransform();
   }
 
-  // --- Save/Load (Basic Placeholder) ---
+  // --- History (Undo/Redo) ---
+  function recordHistory(action) {
+      // Clear future history if we add a new action
+      if (historyIndex < history.length - 1) {
+          history = history.slice(0, historyIndex + 1);
+      }
+      history.push(action);
+      // Limit history size
+      if (history.length > MAX_HISTORY) {
+          history.shift();
+      } else {
+          historyIndex++;
+      }
+      updateUndoRedoButtons();
+  }
+
+  function undo() {
+      if (historyIndex < 0) return; // Nothing to undo
+
+      const action = history[historyIndex];
+      historyIndex--;
+
+      switch (action.type) {
+          case "add-card":
+              const cardToRemove = boardWorld.querySelector(`.card[data-id="${action.cardData.id}"]`);
+              if (cardToRemove) boardWorld.removeChild(cardToRemove);
+              break;
+          case "remove-card":
+              addCard(action.cardData.content, action.cardData.x, action.cardData.y, action.cardData.id, action.cardData.width, action.cardData.height, action.cardData.type, action.cardData.zIndex);
+              break;
+          case "move-card":
+              const cardToMove = boardWorld.querySelector(`.card[data-id="${action.cardId}"]`);
+              if (cardToMove) {
+                  cardToMove.style.left = `${action.from.x}px`;
+                  cardToMove.style.top = `${action.from.y}px`;
+              }
+              break;
+          case "resize-card":
+              const cardToResize = boardWorld.querySelector(`.card[data-id="${action.cardId}"]`);
+              if (cardToResize) {
+                  cardToResize.style.width = `${action.from.w}px`;
+                  cardToResize.style.height = `${action.from.h}px`;
+              }
+              break;
+          case "add-path":
+              drawingPaths = drawingPaths.filter(p => p.id !== action.path.id);
+              break;
+          case "remove-paths": // Undo removing multiple paths
+              action.paths.forEach(removed => {
+                  drawingPaths.splice(removed.index, 0, removed.path);
+              });
+              break;
+      }
+      applyWorldTransform(); // Redraw everything
+      updateUndoRedoButtons();
+  }
+
+  function redo() {
+      if (historyIndex >= history.length - 1) return; // Nothing to redo
+
+      historyIndex++;
+      const action = history[historyIndex];
+
+      switch (action.type) {
+          case "add-card":
+              addCard(action.cardData.content, action.cardData.x, action.cardData.y, action.cardData.id, action.cardData.width, action.cardData.height, action.cardData.type, action.cardData.zIndex);
+              break;
+          case "remove-card":
+              const cardToRemove = boardWorld.querySelector(`.card[data-id="${action.cardData.id}"]`);
+              if (cardToRemove) boardWorld.removeChild(cardToRemove);
+              break;
+          case "move-card":
+              const cardToMove = boardWorld.querySelector(`.card[data-id="${action.cardId}"]`);
+              if (cardToMove) {
+                  cardToMove.style.left = `${action.to.x}px`;
+                  cardToMove.style.top = `${action.to.y}px`;
+              }
+              break;
+          case "resize-card":
+              const cardToResize = boardWorld.querySelector(`.card[data-id="${action.cardId}"]`);
+              if (cardToResize) {
+                  cardToResize.style.width = `${action.to.w}px`;
+                  cardToResize.style.height = `${action.to.h}px`;
+              }
+              break;
+          case "add-path":
+              drawingPaths.push(action.path);
+              break;
+          case "remove-paths": // Redo removing multiple paths
+              action.paths.forEach(removed => {
+                  drawingPaths = drawingPaths.filter(p => p.id !== removed.path.id);
+              });
+              break;
+      }
+      applyWorldTransform(); // Redraw everything
+      updateUndoRedoButtons();
+  }
+
+  function updateUndoRedoButtons() {
+      const undoBtn = document.getElementById("undo-btn");
+      const redoBtn = document.getElementById("redo-btn");
+      if (undoBtn) undoBtn.disabled = historyIndex < 0;
+      if (redoBtn) redoBtn.disabled = historyIndex >= history.length - 1;
+  }
+
+  // --- Save/Load ---
   function getCardData(cardElement) {
-      const isImg = !!cardElement.querySelector('img');
+      const isImg = !!cardElement.querySelector("img");
+      const type = isImg ? "img" : "text";
+      let content = "";
+      if (type === "text") {
+          content = cardElement.dataset.markdownContent || "";
+      } else {
+          const img = cardElement.querySelector("img");
+          content = img ? img.src : "";
+      }
+
       return {
           id: cardElement.dataset.id,
-          type: isImg ? 'img' : 'text',
+          type: type,
           x: parseFloat(cardElement.style.left),
           y: parseFloat(cardElement.style.top),
           width: cardElement.offsetWidth,
           height: cardElement.offsetHeight,
-          content: isImg ? cardElement.querySelector('img').src : cardElement.dataset.markdownContent,
-          zIndex: cardElement.style.zIndex || 10
-          // Add color, tags etc. later
+          content: content,
+          zIndex: parseInt(cardElement.style.zIndex) || 10
       };
   }
-  
+
   function saveBoardToStorage() {
-      const data = {
-          cards: Array.from(boardWorld.querySelectorAll('.card')).map(getCardData),
-          drawing: drawingPaths,
-          viewport: { offsetX: worldOffsetX, offsetY: worldOffsetY, scale: worldScale },
-          cardIdCounter: cardIdCounter
-      };
-      localStorage.setItem('mindCanvasBoard', JSON.stringify(data));
-      console.log('Board saved to localStorage');
+      try {
+          const data = {
+              cards: Array.from(boardWorld.querySelectorAll(".card")).map(getCardData),
+              drawing: drawingPaths,
+              viewport: { offsetX: worldOffsetX, offsetY: worldOffsetY, scale: worldScale },
+              cardIdCounter: cardIdCounter,
+              history: history, // Save history too?
+              historyIndex: historyIndex
+          };
+          localStorage.setItem("mindCanvasBoard", JSON.stringify(data));
+          console.log("Board saved to localStorage");
+      } catch (error) {
+          console.error("Error saving board:", error);
+          alert("Ошибка сохранения доски. Возможно, достигнут лимит хранилища.");
+      }
   }
-  
+
   function loadBoardFromStorage() {
-      const savedData = localStorage.getItem('mindCanvasBoard');
+      const savedData = localStorage.getItem("mindCanvasBoard");
       if (!savedData) return;
-      
+
       try {
           const data = JSON.parse(savedData);
-          
+
           // Clear existing board
-          boardWorld.innerHTML = '';
+          boardWorld.innerHTML = "";
           drawingPaths = [];
-          
-          // Load viewport
+          history = [];
+          historyIndex = -1;
+
           if (data.viewport) {
               worldOffsetX = data.viewport.offsetX || 0;
               worldOffsetY = data.viewport.offsetY || 0;
               worldScale = data.viewport.scale || 1;
           }
-          
-          // Load cards
+
           if (data.cards) {
+              // Sort cards by zIndex before adding to preserve layering
+              data.cards.sort((a, b) => (a.zIndex || 10) - (b.zIndex || 10));
               data.cards.forEach(c => {
-                  const card = addCard(c.content, c.x, c.y, c.id, c.width, c.height, c.type);
-                  card.style.zIndex = c.zIndex || 10;
+                  addCard(c.content, c.x, c.y, c.id, c.width, c.height, c.type, c.zIndex);
               });
           }
-          
-          // Load drawings
+
           if (data.drawing) {
               drawingPaths = data.drawing;
           }
-          
+
           cardIdCounter = data.cardIdCounter || 0;
           
+          // Restore history (optional)
+          // if (data.history && data.historyIndex !== undefined) {
+          //     history = data.history;
+          //     historyIndex = data.historyIndex;
+          // }
+
           applyWorldTransform();
-          console.log('Board loaded from localStorage');
-          
+          updateUndoRedoButtons();
+          console.log("Board loaded from localStorage");
+
       } catch (err) {
-          console.error('Error loading board from localStorage:', err);
-          localStorage.removeItem('mindCanvasBoard'); // Clear corrupted data
+          console.error("Error loading board from localStorage:", err);
+          localStorage.removeItem("mindCanvasBoard");
+          alert("Ошибка загрузки доски. Данные могут быть повреждены.");
       }
   }
-  
-  // --- Auto-save (Example) ---
-  // setInterval(saveBoardToStorage, 30000); // Save every 30 seconds
+
+  // --- Auto-save ---
+  setInterval(saveBoardToStorage, 60000); // Save every 60 seconds
 
   // --- Start the application ---
   init();
